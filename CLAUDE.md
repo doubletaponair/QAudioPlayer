@@ -124,6 +124,9 @@ speak through NVDA are:
 | R | Remaining time as words |
 | T | Current and total time as words |
 | V | Volume and mute state |
+| Update found (startup or U) | "QAudioPlayer update available, version X. Press U to install." |
+| U (no update / manual check) | "You are running the latest version" (only when the user pressed U) |
+| Update download + apply | "Downloading update…" then "Update downloaded. Restarting QAudioPlayer." |
 
 L, K, J, Space, arrow seeking, number jumps, volume up/down, mute, drag-and-drop
 file load all update the visible status line but **do not speak**.
@@ -210,6 +213,35 @@ Don't waste time fighting the wheel — work around it.
 
 ---
 
+## Auto-update (GitHub Releases)
+
+The app updates itself from this repo's **GitHub Releases**. Files:
+
+- `version.py` — `__version__`, the single source of truth. Bump it per release.
+- `updater.py` — pure helpers (`check_for_update`, `download_update`,
+  `apply_update_and_restart`) plus a Qt `UpdateManager` that runs the network
+  work on a background thread and reports back via signals. Stdlib only
+  (`urllib`/`ssl`/`json`) — no new bundle deps.
+
+Flow: on startup `main_window` calls `UpdateManager.check_async()` (delayed
+1.8 s so the welcome speaks first). It GETs the repo's `releases/latest`,
+compares the tag (e.g. `v1.0.1`) to `__version__`, and if newer **and** the
+release has a `QAudioPlayer.exe` asset, announces it. **U** confirms via a
+dialog, downloads the new exe next to the running one, then a detached
+`.bat` waits for the process to exit, swaps the exe, and relaunches.
+
+Because the app is installed **per-user** in `%LOCALAPPDATA%\QAudioPlayer`,
+the self-replace needs **no admin/UAC**. (This is why we moved off the
+Program Files install.) Running from source can check but can't self-apply
+(`sys.frozen` guard) — it announces that gracefully.
+
+**To ship an update:** bump `version.py`, commit/push, rebuild the exe, and
+`gh release create vX.Y.Z dist\QAudioPlayer.exe`. The asset MUST be named
+`QAudioPlayer.exe` (matches `updater.ASSET_NAME` and `build.bat --name`).
+Startup checks are silent when current and fail silently when offline.
+
+---
+
 ## Keyboard map (current truth)
 
 ```
@@ -229,6 +261,8 @@ V                       Speak current volume and mute state
 
 R                       Speak remaining time
 T                       Speak elapsed of total time
+
+U                       Check for / install app updates (see Auto-update below)
 
 O / Ctrl+O              Open file dialog
 F1 / H / Ctrl+/         Show keyboard shortcuts dialog

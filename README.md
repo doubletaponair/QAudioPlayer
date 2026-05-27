@@ -71,6 +71,7 @@ ground up to work with NVDA and JAWS.
 | Key                  | Action                                                 |
 |----------------------|--------------------------------------------------------|
 | O or Ctrl + O        | Open a file.                                           |
+| U                    | Check for and install app updates.                     |
 | F1, H, or Ctrl + /   | Show keyboard shortcuts dialog.                        |
 | Escape (in dialog)   | Close the help dialog.                                 |
 
@@ -109,6 +110,18 @@ build.bat
 
 The .exe will appear in the `dist` folder. You can then build the full
 installer by compiling `installer.iss` with Inno Setup 6.3 or later.
+
+---
+
+## Updates
+
+QAudioPlayer updates itself from this repository's GitHub Releases. On launch it
+quietly checks the latest release in the background; if a newer version exists it
+announces "QAudioPlayer update available" through your screen reader. Press **U**
+to download and install it — the app closes and reopens on the new version by
+itself, with no administrator prompt (it installs per-user). If you're already up
+to date, startup stays silent; press **U** any time to check on demand. If you're
+offline the check fails quietly and nothing is announced.
 
 ---
 

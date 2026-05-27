@@ -45,6 +45,7 @@ SHORTCUTS = [
     ("V", "Speak current volume and mute state"),
     ("R", "Speak remaining time"),
     ("T", "Speak elapsed and total time"),
+    ("U", "Check for and install app updates"),
     ("O or Ctrl + O", "Open a file"),
     ("F1, H, or Ctrl + slash", "Show this help window"),
     ("Escape", "Close this help window"),

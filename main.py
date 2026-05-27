@@ -14,9 +14,12 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 
 def main():
+    from version import __version__
+
     app = QApplication(sys.argv)
     app.setApplicationName("QAudioPlayer")
     app.setApplicationDisplayName("QAudioPlayer")
+    app.setApplicationVersion(__version__)
     app.setOrganizationName("QAudioPlayer")
 
     try:

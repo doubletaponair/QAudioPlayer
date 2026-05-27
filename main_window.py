@@ -34,12 +34,15 @@ from PyQt6.QtWidgets import (
     QSlider,
     QFrame,
     QSizePolicy,
+    QMessageBox,
+    QApplication,
 )
 
 from media_engine import MediaEngine
 from announcer import Announcer
 from time_utils import format_time_verbal, format_time_clock
 from help_dialog import HelpDialog
+from updater import UpdateManager, apply_update_and_restart
 
 
 # Supported formats
@@ -96,6 +99,19 @@ class MainWindow(QMainWindow):
         self._setup_shortcuts()
         self._resize_compact()
 
+        # Auto-update state. The check runs in the background on startup; the
+        # user installs a pending update (or checks on demand) with U.
+        self._pending_update = None        # (version, url) once one is found
+        self._update_in_progress = False
+        self._manual_check = False         # True while a user-initiated check runs
+        self._update_mgr = UpdateManager(self)
+        self._update_mgr.updateAvailable.connect(self._on_update_available)
+        self._update_mgr.upToDate.connect(self._on_up_to_date)
+        self._update_mgr.checkFailed.connect(self._on_check_failed)
+        self._update_mgr.downloadProgress.connect(self._on_download_progress)
+        self._update_mgr.downloadFailed.connect(self._on_download_failed)
+        self._update_mgr.readyToRestart.connect(self._on_ready_to_restart)
+
         QTimer.singleShot(
             400,
             lambda: self._speak(
@@ -103,6 +119,9 @@ class MainWindow(QMainWindow):
                 "or F1 for help."
             ),
         )
+
+        # Let the welcome announcement finish before any update news arrives.
+        QTimer.singleShot(1800, self._update_mgr.check_async)
 
     # ---------------- UI construction ----------------
 
@@ -207,6 +226,9 @@ class MainWindow(QMainWindow):
             # Time announcements
             ("R", self._announce_remaining),
             ("T", self._announce_current_total),
+
+            # Updates
+            ("U", self._on_U),
 
             # File
             ("O", self._open_file_dialog),
@@ -456,6 +478,77 @@ class MainWindow(QMainWindow):
     def _status_only(self, message):
         """Update the visible status line but do NOT speak."""
         self.status_label.setText(message)
+
+    # ---------------- Updates ----------------
+
+    def _on_U(self):
+        """U - install a pending update, or check for one if none is known."""
+        if self._update_in_progress:
+            self._speak("An update is already downloading.", assertive=True)
+            return
+        if self._pending_update:
+            version, url = self._pending_update
+            answer = QMessageBox.question(
+                self,
+                "Install update",
+                f"QAudioPlayer {version} is available.\n\n"
+                f"Install it now? The app will close and reopen automatically.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                self._update_in_progress = True
+                self._speak(f"Downloading update version {version}.", assertive=True)
+                self._update_mgr.download_and_apply_async(url)
+        else:
+            self._manual_check = True
+            self._speak("Checking for updates.", assertive=True)
+            self._update_mgr.check_async()
+
+    def _on_update_available(self, version, url):
+        self._pending_update = (version, url)
+        self._manual_check = False
+        self._speak(
+            f"QAudioPlayer update available, version {version}. Press U to install.",
+            assertive=True,
+        )
+
+    def _on_up_to_date(self, version):
+        # Routine startup checks stay silent; only report when the user asked.
+        if self._manual_check:
+            self._manual_check = False
+            self._speak(
+                f"You are running the latest version, {version}.", assertive=True
+            )
+
+    def _on_check_failed(self, message):
+        # Don't nag on a routine startup check (e.g. offline). Report only when
+        # the user explicitly asked.
+        if self._manual_check:
+            self._manual_check = False
+            self._speak(
+                "Could not check for updates. Check your internet connection.",
+                assertive=True,
+            )
+
+    def _on_download_progress(self, done, total):
+        if total:
+            self._status_only(f"Downloading update: {int(done * 100 / total)}%")
+
+    def _on_download_failed(self, message):
+        self._update_in_progress = False
+        self._speak("Update download failed. Please try again later.", assertive=True)
+
+    def _on_ready_to_restart(self, new_exe_path):
+        self._speak("Update downloaded. Restarting QAudioPlayer.", assertive=True)
+        try:
+            apply_update_and_restart(new_exe_path)
+        except Exception:
+            self._update_in_progress = False
+            self._speak("Could not apply the update.", assertive=True)
+            return
+        # Give NVDA a moment to speak, then quit so the swap can complete.
+        QTimer.singleShot(1200, QApplication.instance().quit)
 
     # ---------------- Clean shutdown ----------------
 
