@@ -1,0 +1,78 @@
+QAudioPlayer — Install Inno Setup 6  (instructions for Claude CoWork)
+=====================================================================
+
+GOAL
+----
+Install Inno Setup 6 on this Windows PC so the QAudioPlayer installer
+(QAudioPlayerSetup.exe) can be compiled from installer.iss later.
+Inno Setup is a free, open-source installer builder from jrsoftware.org.
+
+This requires administrator rights. A Windows UAC prompt will appear during
+installation — Steven will authorise it.
+
+
+WHICH MACHINE / WHERE
+---------------------
+- Machine: this Windows PC (hostname ScottPC, user "steve").
+- Project folder on the PC:  C:\QPlayerBuild\
+- The Inno Setup script that will be compiled later already exists at:
+  C:\QPlayerBuild\installer.iss
+
+
+STEP 1 — Install Inno Setup 6
+-----------------------------
+Preferred (winget — automatically gets the latest version). In PowerShell:
+
+    winget install --id JRSoftware.InnoSetup -e
+
+If winget asks you to accept the source or package agreements, accept them.
+Approve the UAC prompt when it appears.
+
+Fallback (if winget is unavailable) — download and run the official installer:
+    1. Download this URL (it redirects to the latest Inno Setup 6.x installer):
+           https://jrsoftware.org/download.php/is.exe
+    2. Run the downloaded is.exe and click through the wizard. The default
+       options are fine. Approve the UAC prompt.
+
+Version note: we need Inno Setup 6.3 or later (6.7+ is current). Both methods
+above satisfy this.
+
+
+STEP 2 — Verify the install   <-- this is the thing to confirm
+--------------------------------------------------------------
+Check that the Inno Setup command-line compiler (ISCC.exe) is present.
+In PowerShell, run:
+
+    Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+Expected result:  True
+
+Please report back whether that returns True (and the installed version, if
+you can get it). That confirms the job is done.
+
+
+STEP 3 — (optional) Build the installer
+----------------------------------------
+Only if Steven asks you to also build it. Once Inno Setup is installed:
+
+    & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" C:\QPlayerBuild\installer.iss
+
+Output file:  C:\QPlayerBuild\Output\QAudioPlayerSetup.exe
+
+(This needs C:\QPlayerBuild\dist\QAudioPlayer.exe and C:\QPlayerBuild\README.md
+to exist — they already do.)
+
+
+=====================================================================
+NOTE FOR STEVEN (NOT a task for CoWork)
+=====================================================================
+The current installer.iss installs QAudioPlayer SYSTEM-WIDE (into
+"C:\Program Files", with admin rights). That conflicts with the new per-user
+auto-updater: the app now lives in %LOCALAPPDATA%\QAudioPlayer so it can
+replace itself with NO UAC prompt. A Program Files install would make every
+auto-update require elevation (and likely fail silently).
+
+So: installing Inno Setup is fine and useful, but BEFORE you distribute
+QAudioPlayerSetup.exe to other people, ask Claude (the main session) to
+switch installer.iss to a per-user install so auto-updates keep working
+seamlessly. Just installing Inno Setup now does no harm.
