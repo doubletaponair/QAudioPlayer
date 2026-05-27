@@ -1,0 +1,17 @@
+# Build artefacts
+build/
+dist/
+Output/
+__pycache__/
+*.pyc
+*.spec
+
+# NVDA Controller Client — redistributed under NVDA's GPL licence; fetched
+# fresh from NVDA's releases at build time rather than vendored.
+nvdaControllerClient64.dll
+
+# Old packaging snapshot
+KeyMediaPlayer.zip
+
+# macOS
+.DS_Store
