@@ -20,7 +20,7 @@
 ; Output: Output\QAudioPlayerSetup.exe
 
 #define AppName       "QAudioPlayer"
-#define AppVersion    "1.0.0"
+#define AppVersion    "1.0.1"
 #define AppPublisher  "QAudioPlayer"
 #define AppExeName    "QAudioPlayer.exe"
 

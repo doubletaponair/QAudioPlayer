@@ -211,6 +211,17 @@ Don't waste time fighting the wheel — work around it.
    removed because Steven doesn't need to see video in compact mode
    anyway.
 
+5. **The `Ended` state is terminal — play()/set_time()/set_position() are
+   silently ignored after end-of-file.** Seeking to the absolute end (e.g.
+   `set_position(1.0)`) fires `MediaPlayerEndReached` and freezes the player;
+   nothing responds until the media is re-set. This was the "nothing plays
+   after pressing End" bug (fixed in 1.0.1). Two defences in `media_engine.py`:
+   (a) `seek_to_end()` parks ~500 ms *before* the end and pauses, so End never
+   triggers the dead state; (b) `_player_has_ended()` + `_reload_media()` —
+   transport/seek methods reload the media if the player is in `Ended`/`Error`
+   so playback revives instead of freezing. Don't go back to
+   `seek_percent(1.0)` for the End key.
+
 ---
 
 ## Auto-update (GitHub Releases)

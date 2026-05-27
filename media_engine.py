@@ -84,18 +84,23 @@ class MediaEngine(QObject):
     def play_forward(self, speed=1.0):
         """Play forward at given speed. Pitch preserved by scaletempo."""
         self._stop_reverse()
-        self.media_player.set_rate(float(speed))
+        if self._player_has_ended():
+            # End of file is terminal in libVLC: play() is ignored until the
+            # media is re-set. Reload so playback restarts from the beginning.
+            self._reload_media()
         try:
-            if self.media_player.is_playing():
-                pass  # rate change is enough; keep playing
-            else:
+            if not self.media_player.is_playing():
                 self.media_player.play()
         except Exception:
             self.media_player.play()
+        self.media_player.set_rate(float(speed))
         self.state_changed.emit("playing")
 
     def play_reverse(self, speed=1.0):
         """Rewind backward at given speed via timer-based scrubbing (silent)."""
+        if self._player_has_ended():
+            # Revive a player that hit end-of-file so it isn't frozen.
+            self._reload_media()
         self.reverse_speed = float(speed)
         # Explicit pause so audio stops. pause() is a TOGGLE in libVLC,
         # so we use set_pause(1) which is a set-state.
@@ -156,6 +161,8 @@ class MediaEngine(QObject):
                 self.media_player.pause()
             self.state_changed.emit("paused")
         else:
+            if self._player_has_ended():
+                self._reload_media()
             self.media_player.set_rate(1.0)
             self.media_player.play()
             self.state_changed.emit("playing")
@@ -166,6 +173,11 @@ class MediaEngine(QObject):
     # ---------------- Seeking ----------------
 
     def seek_relative(self, delta_ms):
+        if self._player_has_ended():
+            # Reading/seeking is ignored on an ended player - revive it first.
+            self._reload_media()
+            self.media_player.play()
+            self.state_changed.emit("playing")
         current = self.media_player.get_time() or 0
         duration = self.get_duration_ms()
         if duration <= 0:
@@ -175,7 +187,43 @@ class MediaEngine(QObject):
 
     def seek_percent(self, fraction):
         fraction = max(0.0, min(1.0, fraction))
+        if self._player_has_ended():
+            # Revive an ended player, then seek to the requested point.
+            self._reload_media()
+            self.media_player.play()
+            self.state_changed.emit("playing")
         self.media_player.set_position(fraction)
+
+    def seek_to_end(self):
+        """Jump to just before the end and park there, paused.
+
+        We deliberately stop ~half a second short of the absolute end. Seeking
+        to the very end drives libVLC into its terminal 'Ended' state, after
+        which it ignores play/seek until the media is reloaded (this was the
+        'nothing plays after pressing End' bug). Parking just before the end,
+        paused, keeps the player alive and fully controllable.
+        """
+        self._stop_reverse()
+        if self._player_has_ended():
+            self._reload_media()
+        # set_time / set_position only take effect on a live (playing or
+        # paused) player, so make sure it has started first.
+        try:
+            state = self.media_player.get_state()
+        except Exception:
+            state = None
+        if state not in (vlc.State.Playing, vlc.State.Paused):
+            self.media_player.play()
+        duration = self.get_duration_ms()
+        if duration > 0:
+            self.media_player.set_time(max(0, duration - 500))
+        else:
+            self.media_player.set_position(0.999)
+        try:
+            self.media_player.set_pause(1)
+        except Exception:
+            pass
+        self.state_changed.emit("paused")
 
     # ---------------- Volume ----------------
 
@@ -244,6 +292,30 @@ class MediaEngine(QObject):
                 self.get_position_ms(),
                 self.get_duration_ms(),
             )
+
+    def _player_has_ended(self):
+        """True if libVLC is in a terminal state (Ended/Error) where play(),
+        set_time() and set_position() are silently ignored until the media is
+        re-set. See _reload_media()."""
+        try:
+            return self.media_player.get_state() in (
+                vlc.State.Ended, vlc.State.Error
+            )
+        except Exception:
+            return False
+
+    def _reload_media(self):
+        """Re-set the current file so the player leaves the terminal Ended
+        state and becomes controllable again. Leaves it stopped at position 0;
+        the caller restarts playback as needed. The video output (HWND) lives
+        on the player, not the media, so it survives this."""
+        if not self.current_file:
+            return
+        try:
+            media = self.vlc_instance.media_new(self.current_file)
+            self.media_player.set_media(media)
+        except Exception:
+            pass
 
     def _on_end_reached(self, event):
         self.media_ended.emit()

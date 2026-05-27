@@ -6,4 +6,4 @@ check the repo's latest release on startup and offer to update when this
 number is older than the release tag. See updater.py.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

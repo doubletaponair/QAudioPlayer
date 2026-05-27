@@ -314,7 +314,7 @@ class MainWindow(QMainWindow):
     def _jump_to_end(self):
         if not self._require_file():
             return
-        self.engine.seek_percent(1.0)
+        self.engine.seek_to_end()
         self._status_only("End of file")
 
     def _adjust_volume(self, delta):
