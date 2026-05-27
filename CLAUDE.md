@@ -53,7 +53,7 @@ The user-facing brief:
 - **nvdaControllerClient64.dll** sits in the project root and is bundled
   into the .exe at build time. This is how the app speaks through NVDA.
 - **PyInstaller** for building `QAudioPlayer.exe` (`pip install pyinstaller`)
-- **Inno Setup 6.3+** (currently 6.7.1) for the installer
+- **Inno Setup 6.3+** (6.7.3 installed per-user at `%LOCALAPPDATA%\Programs\Inno Setup 6`) for the installer
 
 ---
 
@@ -291,8 +291,16 @@ build.bat
 Output: `dist\QAudioPlayer.exe`. The DLL is bundled inside.
 
 **Build installer:**
-Right-click `installer.iss` in File Explorer → Compile (requires Inno
-Setup 6.3+, ideally 6.7.1+). Output: `Output\QAudioPlayerSetup.exe`.
+Inno Setup 6.7.3 is installed **per-user** on the PC at
+`%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe` (via winget,
+`JRSoftware.InnoSetup`). Compile from the project dir:
+```
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer.iss
+```
+Output: `Output\QAudioPlayerSetup.exe`. `installer.iss` is a **per-user**
+install (`PrivilegesRequired=lowest`, `DefaultDirName={localappdata}\QAudioPlayer`,
+all registry via `HKA`→HKCU) — this is deliberate so the auto-updater can
+self-replace without UAC. Don't revert it to a Program Files / HKLM install.
 
 **Distribution target arches:**
 - Windows 10 x64 (1809+) — native
