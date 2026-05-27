@@ -1,17 +1,21 @@
 ; Inno Setup script for QAudioPlayer
 ;
+; PER-USER install (no administrator rights / no UAC required).
+;   - Installs into %LOCALAPPDATA%\QAudioPlayer
+;   - All registry writes go to HKCU (via Inno's HKA auto-root, which resolves
+;     to HKEY_CURRENT_USER when PrivilegesRequired=lowest)
+;
+; This matches the in-app auto-updater: because the exe lives in a user-writable
+; location, QAudioPlayer can replace itself on update with no elevation prompt.
+; Do NOT switch this back to a Program Files / HKLM (admin) install without also
+; reworking the updater, or every auto-update will require UAC and likely fail.
+;
 ; Architecture / OS support:
-;   - Windows 10 x64 (build 17763 / version 1809 and later)
-;   - Windows 11 x64 (all builds)
-;   - Windows 11 ARM64 (x64 app runs under Prism emulation)
-;   - Windows 10 ARM64 (older emulation - works but slower)
+;   - Windows 10 x64 (build 17763 / 1809 and later) and Windows 11 x64
+;   - ARM64 Windows runs the x64 exe under built-in emulation (transparent)
 ;
-; The bundled .exe is x64. On ARM64 Windows, it runs via the Windows
-; built-in x64 emulator. For most users this is transparent; they'll
-; never notice.
-;
-; Build: compile with Inno Setup 6.3 or later (6.7.1 recommended).
-;        Right-click this file and choose "Compile" in File Explorer.
+; Build: compile with Inno Setup 6.3 or later (6.7+ recommended), e.g.
+;        ISCC.exe installer.iss
 ;
 ; Output: Output\QAudioPlayerSetup.exe
 
@@ -26,7 +30,7 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 VersionInfoVersion={#AppVersion}.0
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\QAudioPlayer
+DefaultDirName={localappdata}\QAudioPlayer
 DefaultGroupName={#AppName}
 OutputDir=Output
 OutputBaseFilename=QAudioPlayerSetup
@@ -41,7 +45,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; Require Windows 10 1809 (build 17763) or later.
 MinVersion=10.0.17763
 
-PrivilegesRequired=admin
+; Per-user install: no elevation. HKA registry root resolves to HKCU.
+PrivilegesRequired=lowest
 ChangesAssociations=yes
 WizardStyle=modern
 DisableWelcomePage=no
@@ -66,45 +71,45 @@ Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Registry]
-; ProgID for the file handler
-Root: HKCR; Subkey: "QAudioPlayer.MediaFile"; ValueType: string; ValueName: ""; ValueData: "QAudioPlayer - Media File"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "QAudioPlayer.MediaFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"
-Root: HKCR; Subkey: "QAudioPlayer.MediaFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
+; ProgID for the file handler (HKA -> HKCU\Software\Classes for a per-user install)
+Root: HKA; Subkey: "Software\Classes\QAudioPlayer.MediaFile"; ValueType: string; ValueName: ""; ValueData: "QAudioPlayer - Media File"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\QAudioPlayer.MediaFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"
+Root: HKA; Subkey: "Software\Classes\QAudioPlayer.MediaFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
 
 ; "Open with" entries for audio formats
-Root: HKCR; Subkey: ".mp3\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".wav\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".m4a\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".aac\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".flac\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".ogg\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".opus\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".wma\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.mp3\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.wav\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.m4a\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.aac\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.flac\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.ogg\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.opus\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.wma\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
 
 ; "Open with" entries for video formats
-Root: HKCR; Subkey: ".mp4\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".mov\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".m4v\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".avi\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".mkv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".webm\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".wmv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKCR; Subkey: ".flv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.mp4\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.mov\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.m4v\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.avi\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.mkv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.webm\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.wmv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\Classes\.flv\OpenWithProgids"; ValueType: string; ValueName: "QAudioPlayer.MediaFile"; ValueData: ""; Flags: uninsdeletevalue; Tasks: registerdefault
 
-; Register the app in the Default Apps system
-Root: HKLM; Subkey: "SOFTWARE\RegisteredApplications"; ValueType: string; ValueName: "QAudioPlayer"; ValueData: "SOFTWARE\QAudioPlayer\Capabilities"; Flags: uninsdeletevalue; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "QAudioPlayer"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "A keyboard-first, accessible media player with QuickTime-style JKL controls."; Tasks: registerdefault
+; Register the app in the Default Apps system (per-user)
+Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "QAudioPlayer"; ValueData: "Software\QAudioPlayer\Capabilities"; Flags: uninsdeletevalue; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "QAudioPlayer"; Flags: uninsdeletekey; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "A keyboard-first, accessible media player with QuickTime-style JKL controls."; Tasks: registerdefault
 
 ; File associations under Capabilities
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mp3"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".wav"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".m4a"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mp4"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mov"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".flac"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mkv"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
-Root: HKLM; Subkey: "SOFTWARE\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".avi"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mp3"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".wav"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".m4a"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mp4"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mov"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".flac"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mkv"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
+Root: HKA; Subkey: "Software\QAudioPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".avi"; ValueData: "QAudioPlayer.MediaFile"; Tasks: registerdefault
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
